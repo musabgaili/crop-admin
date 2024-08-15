@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
 
+    return redirect()->route('home');
 
     $farm = Farm::where('area', '!=', null)->first();
     // return json_decode($farm)->area->coordinates;
