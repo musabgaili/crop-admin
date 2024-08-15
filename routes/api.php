@@ -5,18 +5,13 @@ use App\Http\Controllers\Api\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\Auth\ResetPasswordController;
 use App\Http\Controllers\SensorReadController;
 use App\Http\Controllers\TaskController;
-use App\Http\Controllers\FarmAdmin\WorkerController;
 use App\Http\Controllers\FarmController;
-use App\Http\Controllers\FarmGroupController;
-use App\Http\Controllers\SensorController;
 use App\Http\Controllers\SesnsorController;
-use App\Models\Farm;
+use App\Http\Controllers\SesnsorControllerLive;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
-use MatanYadaev\EloquentSpatial\Objects\LineString;
-use MatanYadaev\EloquentSpatial\Objects\Point;
-use MatanYadaev\EloquentSpatial\Objects\Polygon;
+
+
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -24,16 +19,12 @@ Route::get('/user', function (Request $request) {
 
 
 Route::prefix('/auth')->group(function () {
-
     // Registeration of user
     Route::post('/register', [AuthController::class, 'register']);
-
     // login of the user
     Route::post('/login', [AuthController::class, 'login']);
-
     // Logout of the user
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
-
     // forgot and reset passwords:
     Route::post('password/forgot-password', [ForgotPasswordController::class, 'forgotPassword']);
     Route::post('password/reset', [ResetPasswordController::class, 'passwordReset']);
@@ -48,11 +39,87 @@ Route::post('/sensor-read/store', [SensorReadController::class, 'store']);
 Route::get('/sensor-read/{sensor_id}', [SensorReadController::class, 'index']);
 Route::post('/sensors-read/read-sensor-data', [SensorReadController::class, 'readSensorDataById']);
 
+
+/**
+ * // => "api/farms/" returns farms related to worker farm group
+ * // => "api/farms/{farmID}" returns single farm without sensors Data
+ * // => "farms/read-single-farm/{farmID}" returns farm sensors today
+ */
+Route::apiResource('/farms', FarmController::class)->middleware('auth:sanctum');
+/**
+   EDITED FUNCTION'S NAME AND INSIDE IT
+ */
+Route::get('/farms/read-single-farm/{farm}', [SesnsorController::class, 'singleFarmSensors'])->name('singleFarmReading');
+
+
+/// will get the average in week for specific Sensorby id
+Route::prefix('/sensors/average')->group(function () {
+    Route::get('/tds/{id}', [SesnsorController::class, 'tds'])->name('tds');
+    Route::get('/light/{id}', [SesnsorController::class, 'light'])->name('light');
+    Route::get('/humidity/{id}', [SesnsorController::class, 'humidity'])->name('humidity');
+    Route::get('/moisture/{id}', [SesnsorController::class, 'moisture'])->name('moisture');
+    Route::get('/temeprature/{id}', [SesnsorController::class, 'temeprature'])->name('temeprature');
+
+    /**
+       REAPLACED THE ABOVE APIs WITH THIS ONE:
+    */
+    Route::get('/all/{id}', [SesnsorController::class, 'all'])->name('all');
+});
+
+
+// will get live for specific Sensor by id
+// limit is optional
+/**
+ * LIMIT IS NUMERICAL > WILL RETURN ZERO RESULT IF STRING PASSED
+ */
+Route::prefix('/sensors/live')->group(function () {
+    Route::get('/tds/{id}/{limit?}', [SesnsorControllerLive::class, 'tds'])->name('tds');
+    Route::get('/light/{id}/{limit?}', [SesnsorControllerLive::class, 'light'])->name('light');
+    Route::get('/humidity/{id}/{limit?}', [SesnsorControllerLive::class, 'humidity'])->name('humidity');
+    Route::get('/moisture/{id}/{limit?}', [SesnsorControllerLive::class, 'moisture'])->name('moisture');
+    Route::get('/temeprature/{id}/{limit?}', [SesnsorControllerLive::class, 'temeprature'])->name('temeprature');
+});
+
+
+// FarmGroupRoutes:
+// Route::apiResource('/farm-groups', FarmGroupController::class);
+
+
+Route::prefix('/tasks')->middleware('auth:sanctum')->group(function () {
+    Route::get('/', [TaskController::class, 'index']);
+    /**
+       ADDED THIS API (STORE), NEEDS SOME FIXES
+       => NOT WORKING DUE TO NULL ISSUES
+     */
+    Route::post('/', [TaskController::class, 'store']);
+    Route::post('/update-status/{task}', [TaskController::class, 'updateStatus']);
+    /**
+       WASN'T ABLE TO USE PROPERLY
+     */
+    Route::post('/revisoin-request', [TaskController::class, 'sendRevisionRequest']);
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ NOT USABLE FOR NOW
+ */
+
 // Sensor Route
 
 // Route::apiResource('/sensors' , SensorController::class);
 
-Route::post('/sensor-readings/read-sensor-data', [SensorReadController::class, 'readSensorDataById']);
+// Route::post('/sensor-readings/read-sensor-data' , [SensorReadingsController::class , 'readSensorDataById']);
 
 
 /**
@@ -80,68 +147,3 @@ Route::post('/sensor-readings/read-sensor-data', [SensorReadController::class, '
 // change
 // Farm routes
 //  1. to store a farm
-
-Route::apiResource('/farms', FarmController::class);
-
-
-
-// FarmGroupRoutes:
-Route::apiResource('/farm-groups', FarmGroupController::class);
-
-
-
-Route::prefix('/tasks')->middleware('auth:sanctum')->group(function () {
-    Route::get('/', [TaskController::class, 'index']);
-    Route::post('/update-status/{task}', [TaskController::class, 'updateStatus']);
-    Route::post('/revisoin-request', [TaskController::class, 'sendRevisionRequest']);
-});
-
-
-Route::prefix('/sensors')->group(function () {
-    // Rouget
-    Route::get('/read-single-farm/{farm}', [SesnsorController::class, 'singleFarmReading'])->name('singleFarmReading');
-
-    // Route::get('/tds/{farm}', [SesnsorController::class , 'tds'])->name('tds');
-    // Route::get('/light/{farm}', [SesnsorController::class , 'light'])->name('light');
-    // Route::get('/thumidityds/{farm}', [SesnsorController::class , 'humidity'])->name('humidity');
-    // Route::get('/tds/{farm}', [SesnsorController::class , 'tds'])->name('tds');
-    // Route::get('/tds/{farm}', [SesnsorController::class , 'tds'])->name('tds');
-});
-
-
-Route::post('/random', function (Request $request) {
-
-
-    $geo =  json_decode($request->polygon)->geometry->coordinates[0];
-
-    $boundary = new Collection();
-
-    // foreach ($request->geo[0] as $key => $geo) {
-    /**
-     * when changed to then new @Component
-     * will access geo directly
-     */
-    foreach ($geo as $key => $geo) {
-        $pt =  new Point($geo[0], $geo[1]);
-        // $pt = [$geo['lat'], $geo['lng']];
-        $boundary->push($pt);
-    }
-
-    $x =   $boundary->push($boundary->first());
-
-    $farm = Farm::create([
-        'farm_group_id' => 3,
-        'name' => 'name',
-        'location' => 'location',
-        'size' => 1,
-        'crop_type' => 'crop_type',
-        'description' => 'description',
-        'area' => new Polygon([
-            new LineString($boundary),
-        ]),
-    ]);
-    return $farm;
-
-    return $boundary;
-    // return $request;
-})->name('post-random');
