@@ -13,10 +13,12 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Queue\Worker;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
 
+    return Hash::make(12345678);
     return redirect()->route('home');
 
     $farm = Farm::where('area', '!=', null)->first();

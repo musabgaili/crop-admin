@@ -62,9 +62,11 @@ class TaskWebController extends Controller
      */
     public function show(string $id)
     {
+        $workers = User::where('farm_group_id', auth()->user()->farm_group_id)
+        ->where('type', 2)->get();
 
         $task = Task::findOrFail($id);
-        return view('tasks.show' , ['task' => $task]);
+        return view('tasks.show' , ['task' => $task,'workers'=> $workers]);
     }
 
     /**
@@ -80,7 +82,27 @@ class TaskWebController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+          //
+          $request->validate([
+            'title' => 'required',
+            'description' => 'required',
+            // 'status' => 'required',
+            'due_date' => 'date_format:Y-m-d|after:now',
+        ]);
+        // return $request;
+
+        $task = Task::create([
+            'title' => $request->title,
+            'description' => $request->description,
+            'due_date' => $request->due_date,
+            'assigned_to_id' => $request->worker_id,
+            'status'=> 1,
+            'farm_group_id' => auth()->user()->farm_group_id,
+
+        ]);
+
+        return redirect()->route('tasks.index');
+
     }
 
     /**
